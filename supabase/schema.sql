@@ -4,13 +4,14 @@
 create table if not exists public.scores (
   id         bigint generated always as identity primary key,
   name       text        not null check (char_length(btrim(name)) between 1 and 12),
-  score      integer     not null check (score between 1 and 50000000),
+  score      integer     not null check (score between 1 and 2000000000),  -- 約20億（integer の上限の手前）
   max_chain  integer     not null default 0 check (max_chain between 0 and 999),
   act        integer     not null default 1 check (act between 1 and 999),
   duration   real        not null check (duration between 3 and 7200),  -- 遊んだ秒数
   created_at timestamptz not null default now(),
-  -- 遊んだ時間に対してありえない高得点は受け付けない（1秒あたり 6万点まで）
-  constraint plausible_score check (score <= duration * 60000 + 50000)
+  -- 遊んだ時間に対してありえない高得点は受け付けない。
+  -- 得点は後半ほど急に伸びる（1回の爆発の得点が巻き込んだ数の2乗に近づく）ので、時間の2乗に比例する余裕を持たせる。
+  constraint plausible_score check (score <= duration * duration * 2500 + duration * 60000 + 50000)
 );
 
 create index if not exists scores_score_idx on public.scores (score desc, created_at asc);
